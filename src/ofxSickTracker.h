@@ -48,8 +48,12 @@ public:
 		useKmeans = false;
 	}
 	void setRegion(const ofRectangle& region) {
-		this->region = region;
+      this->region = this->region.fromRectangle(region);
 	}
+    void setRegion(const ofPolyline& region){
+      this->region = region;
+      this->region.close();
+    }
 	void draw() {
 		ofPushStyle();
 		ofNoFill();
@@ -58,7 +62,7 @@ public:
 			((ofxSickFollower) followers[i]).draw();
 		}
 		ofSetColor(255);
-		ofRect(region);
+		region.draw();
 		ofPopStyle();
 	}
 	void update(ofxSick& sick) {
@@ -80,7 +84,7 @@ public:
 	}
 protected:
 	vector<cv::Point2f> clusters;
-	ofRectangle region;
+    ofPolyline region;
 	unsigned int maxClusterCount;
 	float maxStddev;
 	bool useKmeans;

@@ -30,8 +30,9 @@ public:
     void exit(); 
     void guiEvent(ofxUIEventArgs &e);
 	    
-    int numVertices;
-    float scale;
+    int numVertices, minClusterSize, maxPointDistance;
+    unsigned int maxClusterCount;
+    float scale, maxStddev;
     draggableVertex vertices[4];
 	
 	ofxSickGrabber grabber;

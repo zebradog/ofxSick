@@ -10,14 +10,23 @@ void testApp::setup() {
 	ofSetLogLevel(OF_LOG_VERBOSE);
   
     scale = 0.15;
+    minClusterSize = 1;
+    maxPointDistance = 50;
+    maxClusterCount = 12;
+    maxStddev = 60;
   
     float dim = 24; 
 	float xInit = OFX_UI_GLOBAL_WIDGET_SPACING; 
     float length = 320-xInit; 
 
     gui = new ofxUICanvas(0, 0, length+xInit, ofGetHeight());
-    gui->addWidgetDown(new ofxUILabel("SETTINGS", OFX_UI_FONT_LARGE)); 
+    gui->addWidgetDown(new ofxUILabel("SETTINGS", OFX_UI_FONT_LARGE));
     gui->addSlider("SCALE", 0.0, 1.0, scale, length-xInit,dim);
+    //gui->addSlider("MAX STD DEV", 1, 300, maxStddev, length-xInit,dim);
+    //gui->addSlider("MAX CLUSTERS", 1, 100, maxClusterCount, length-xInit,dim);
+    gui->addSlider("MIN CLUSTER SIZE", 1, 100, minClusterSize, length-xInit,dim);
+    gui->addSlider("MAX POINT DISTANCE", 1, 300, maxPointDistance, length-xInit,dim);
+    gui->addWidgetDown(new ofxUIFPS(OFX_UI_FONT_MEDIUM)); 
     ofAddListener(gui->newGUIEvent,this,&testApp::guiEvent);	
 	
 	grabber.setup();
@@ -39,6 +48,7 @@ void testApp::setup() {
 		vertices[i].radius = 40;
         trackingRegion.addVertex(vertices[i].x,vertices[i].y);
 	}
+    tracker.setupNaive(minClusterSize,maxPointDistance);
     tracker.setRegion(trackingRegion);
 	tracker.setMaximumDistance(100);
 	tracker.setPersistence(10);
@@ -59,11 +69,26 @@ void testApp::exit()
 void testApp::guiEvent(ofxUIEventArgs &e)
 {
     string name = e.widget->getName();
-	if(name == "SCALE")
-	{
+	if(name == "SCALE"){
 		ofxUISlider *slider = (ofxUISlider *) e.widget;
 		scale = slider->getScaledValue();
-	}
+	}else if(name == "MAX STD DEV"){
+        ofxUISlider *slider = (ofxUISlider *) e.widget;
+        this->maxStddev = slider->getScaledValue();
+        tracker.setupKmeans(this->maxStddev,this->maxClusterCount);
+    }else if(name == "MAX CLUSTERS"){
+        ofxUISlider *slider = (ofxUISlider *) e.widget;
+        this->maxClusterCount = slider->getScaledValue();
+        tracker.setupKmeans(this->maxStddev,this->maxClusterCount);
+    }else if(name == "MIN CLUSTER SIZE"){
+        ofxUISlider *slider = (ofxUISlider *) e.widget;
+        this->minClusterSize = slider->getScaledValue();
+        tracker.setupNaive(this->minClusterSize,this->maxPointDistance);
+    }else if(name == "MAX POINT DISTANCE"){
+        ofxUISlider *slider = (ofxUISlider *) e.widget;
+        this->maxPointDistance = slider->getScaledValue();
+        tracker.setupNaive(this->minClusterSize,this->maxPointDistance);
+    }
 }
 
 void testApp::draw() {

@@ -29,6 +29,9 @@ public:
   
     void exit(); 
     void guiEvent(ofxUIEventArgs &e);
+  
+    bool isDragging;
+    ofVec2f dragOffset, dragStart;
 	    
     int numVertices, minClusterSize, maxPointDistance;
     unsigned int maxClusterCount;

@@ -15,6 +15,9 @@ void testApp::setup() {
     maxClusterCount = 12;
     maxStddev = 60;
   
+    isDragging = false;
+    dragOffset.x = dragOffset.y = 0;
+  
     float dim = 24; 
 	float xInit = OFX_UI_GLOBAL_WIDGET_SPACING; 
     float length = 320-xInit; 
@@ -27,7 +30,8 @@ void testApp::setup() {
     gui->addSlider("MIN CLUSTER SIZE", 1, 100, minClusterSize, length-xInit,dim);
     gui->addSlider("MAX POINT DISTANCE", 1, 300, maxPointDistance, length-xInit,dim);
     gui->addWidgetDown(new ofxUIFPS(OFX_UI_FONT_MEDIUM)); 
-    ofAddListener(gui->newGUIEvent,this,&testApp::guiEvent);	
+    ofAddListener(gui->newGUIEvent,this,&testApp::guiEvent);
+    gui->loadSettings("GUI/guiSettings.xml");
 	
 	grabber.setup();
   
@@ -63,6 +67,7 @@ void testApp::update() {
 
 void testApp::exit()
 {
+    gui->saveSettings("GUI/guiSettings.xml");
 	delete gui; 
 }
 
@@ -104,7 +109,7 @@ void testApp::draw() {
 
   	
 	ofPushMatrix();
-  	ofTranslate(ofGetWidth() / 2, ofGetHeight() / 2);
+  	ofTranslate(ofGetWidth() / 2 + dragOffset.x, ofGetHeight() / 2 + dragOffset.y);
 	ofScale(scale, scale);
   
 	sick->draw(12, 2400);
@@ -122,8 +127,8 @@ void testApp::draw() {
 
 //------------- -------------------------------------------------
 void testApp::mouseMoved(int x, int y ){
-    int mX = (x - ofGetWidth() / 2) / scale;
-    int mY = (y - ofGetHeight() / 2) / scale;
+    int mX = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
+    int mY = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
 	for (int i = 0; i < numVertices; i++){
 		float diffx = mX - vertices[i].x;
 		float diffy = mY - vertices[i].y;
@@ -138,8 +143,8 @@ void testApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void testApp::mouseDragged(int x, int y, int button){
-    int mX = (x - ofGetWidth() / 2) / scale;
-    int mY = (y - ofGetHeight() / 2) / scale;
+    int mX = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
+    int mY = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
     trackingRegion.clear();
 	for (int i = 0; i < numVertices; i++){
 		if (vertices[i].bBeingDragged == true){
@@ -149,27 +154,38 @@ void testApp::mouseDragged(int x, int y, int button){
         trackingRegion.addVertex(vertices[i].x,vertices[i].y);
 	}
     tracker.setRegion(trackingRegion);
+    if(isDragging){
+      dragOffset.x = x - dragStart.x;
+      dragOffset.y = y - dragStart.y;
+    }
 }
 
 //--------------------------------------------------------------
 void testApp::mousePressed(int x, int y, int button){
-    int mX = (x - ofGetWidth() / 2) / scale;
-    int mY = (y - ofGetHeight() / 2) / scale;
+    int mX = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
+    int mY = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
+    bool onVertice = false;
 	for (int i = 0; i < numVertices; i++){
 		float diffx = mX - vertices[i].x;
 		float diffy = mY - vertices[i].y;
 		float dist = sqrt(diffx*diffx + diffy*diffy);
 		if (dist < vertices[i].radius){
-			vertices[i].bBeingDragged = true;
+			vertices[i].bBeingDragged = onVertice = true;
 		} else {
 			vertices[i].bBeingDragged = false;
 		}	
 	}
+    if(!onVertice){
+      isDragging = true;
+      dragStart.x = x - dragOffset.x;
+      dragStart.y = y - dragOffset.y;
+    }
+    
 }
 
 //--------------------------------------------------------------
 void testApp::mouseReleased(int x, int y, int button){
-
+    isDragging = false;
 	for (int i = 0; i < numVertices; i++){
 		vertices[i].bBeingDragged = false;	
 	}

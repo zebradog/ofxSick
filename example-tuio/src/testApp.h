@@ -40,6 +40,10 @@ public:
 	
 	ofxSickGrabber grabber;
 	ofxSick* sick;
+  
+    vector<cv::Point2f> clusters;
+  
+    int mX, mY;
 
     ofxUICanvas *gui; 	
   

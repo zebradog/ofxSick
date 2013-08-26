@@ -5,6 +5,9 @@
 #include "ofxSickTracker.h"
 #include "ofxCv.h"
 #include "ofxUI.h"
+#include "TuioServer.h"
+
+using namespace TUIO;
 
 typedef struct {
 
@@ -15,6 +18,11 @@ typedef struct {
 	float 	radius;
 	
 }draggableVertex;
+
+typedef struct {
+   unsigned int label;
+   TuioCursor   *cursor;
+}trackedCluster;
 
 class testApp : public ofBaseApp {
 public:
@@ -41,12 +49,13 @@ public:
 	ofxSickGrabber grabber;
 	ofxSick* sick;
   
-    vector<cv::Point2f> clusters;
-  
     int mX, mY;
 
     ofxUICanvas *gui; 	
   
 	ofxSickTracker<ofxSickFollower> tracker;
 	ofPolyline trackingRegion;
+  
+    TuioServer *tuioServer;
+    vector<trackedCluster> clusters;
 };

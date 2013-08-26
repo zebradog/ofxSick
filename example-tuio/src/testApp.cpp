@@ -58,6 +58,11 @@ void testApp::setup() {
 	tracker.setMaximumDistance(100);
 	tracker.setPersistence(10);
   
+    tuioServer = new TuioServer("127.0.0.1",3333); //external client
+	tuioServer->setSourceName("ofxSickExample");
+	tuioServer->enableObjectProfile(false);
+	tuioServer->enableBlobProfile(false);
+  
     ofSetFrameRate(30);
   
 }
@@ -67,29 +72,63 @@ void testApp::update() {
 	if(sick->isFrameNew()) {
 		tracker.update(*sick);
 	}
-    clusters = tracker.getClusters();
+    TuioTime frameTime = TuioTime::getSessionTime();
+	tuioServer->initFrame(frameTime);
+    vector<cv::Point2f> currentClusters = tracker.getClusters();
   
-    for(int i = 0; i < clusters.size(); i++) {
-      
-        ofVec2f p = ofVec2f(clusters[i].x, clusters[i].y);
-      
-        //http://math.stackexchange.com/questions/13404/mapping-irregular-quadrilateral-to-a-rectangle
-        ofVec2f p0 = ofVec2f(vertices[0].x,vertices[0].y);
-        ofVec2f p1 = ofVec2f(vertices[1].x,vertices[1].y);
-        ofVec2f p2 = ofVec2f(vertices[2].x,vertices[2].y);
-        ofVec2f p3 = ofVec2f(vertices[3].x,vertices[3].y);
-      
-        ofVec2f n0 = ofVec2f(p1-p0).getPerpendicular();
-        ofVec2f n1 = ofVec2f(p2-p1).getPerpendicular();
-        ofVec2f n2 = ofVec2f(p3-p2).getPerpendicular();
-        ofVec2f n3 = ofVec2f(p0-p3).getPerpendicular();
-      
-        float u =  ((p-p1).dot(n0)) / ( (p-p1).dot(n0) + (p-p3).dot(n2) );
-        float v =  1-((p-p1).dot(n1)) / ( (p-p1).dot(n1) + (p-p3).dot(n3) );
+    //add/update cursors
+    for(int i = 0; i < currentClusters.size(); i++){
     
-        //ofLog(OF_LOG_NOTICE, ofToString(u)+","+ofToString(v));
+      //calculate normalized coordinates
+      //http://math.stackexchange.com/questions/13404/mapping-irregular-quadrilateral-to-a-rectangle
+      ofVec2f p = ofVec2f(currentClusters[i].x, currentClusters[i].y);
+  
+      ofVec2f p0 = ofVec2f(vertices[0].x,vertices[0].y);
+      ofVec2f p1 = ofVec2f(vertices[1].x,vertices[1].y);
+      ofVec2f p2 = ofVec2f(vertices[2].x,vertices[2].y);
+      ofVec2f p3 = ofVec2f(vertices[3].x,vertices[3].y);
+    
+      ofVec2f n0 = ofVec2f(p1-p0).getPerpendicular();
+      ofVec2f n1 = ofVec2f(p2-p1).getPerpendicular();
+      ofVec2f n2 = ofVec2f(p3-p2).getPerpendicular();
+      ofVec2f n3 = ofVec2f(p0-p3).getPerpendicular();
+    
+      float u =  ((p-p1).dot(n0)) / ( (p-p1).dot(n0) + (p-p3).dot(n2) );
+      float v =  1-((p-p1).dot(n1)) / ( (p-p1).dot(n1) + (p-p3).dot(n3) );
+    
+      bool tracked = false;
+      //update TUIO cursor
+      for(int j = 0; j < clusters.size(); j++){
+        if(tracker.getLabelFromIndex(i) == clusters[j].label){
+          tuioServer->updateTuioCursor(clusters[j].cursor,u,v);
+          tracked = true;
+          break;
+        }
+      }
+      //or add a new one
+      if(!tracked){
+        trackedCluster c;
+        c.cursor = tuioServer->addTuioCursor(u,v);
+        c.label = tracker.getLabelFromIndex(i);
+        clusters.push_back(c);
+      }
     }
   
+    //remove idle cursors
+    /*tuioServer->stopUntouchedMovingCursors();
+    std::list<TuioCursor*> dead_cursor_list = tuioServer->getUntouchedCursors();
+    std::list<TuioCursor*>::iterator dead_cursor;
+    for(dead_cursor=dead_cursor_list.begin(); dead_cursor!= dead_cursor_list.end(); dead_cursor++) {
+		for(int i = 0; i < clusters.size(); i++){
+          if(&*dead_cursor == &clusters[i].cursor){
+            clusters.erase(clusters.begin()+i);
+            break;
+          }
+        }
+	}
+	tuioServer->removeUntouchedStoppedCursors();*/
+  
+	tuioServer->commitFrame();
 }
 
 void testApp::exit()

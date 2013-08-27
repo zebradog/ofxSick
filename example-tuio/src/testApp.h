@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
    unsigned int label;
-   int          cursorID;
+   TUIO::TuioCursor *cursor;
 }trackedCluster;
 
 class testApp : public ofBaseApp {

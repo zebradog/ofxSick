@@ -75,16 +75,18 @@ void testApp::update() {
 	if(sick->isFrameNew()) {
 		tracker.update(*sick);
 	}
+  
     TuioTime frameTime = TuioTime::getSessionTime();
 	tuioServer->initFrame(frameTime);
-    vector<cv::Point2f> currentClusters = tracker.getClusters();
+    vector<unsigned int> currentLabels = tracker.getCurrentLabels();
   
     //add/update cursors
-    for(int i = 0; i < currentClusters.size(); i++){
+    for(int i = 0; i < currentLabels.size(); i++){
     
       //calculate normalized coordinates
       //http://math.stackexchange.com/questions/13404/mapping-irregular-quadrilateral-to-a-rectangle
-      ofVec2f p = ofVec2f(currentClusters[i].x, currentClusters[i].y);
+      cv:Point_<float> c = tracker.getCurrent(currentLabels[i]);
+      ofVec2f p = ofVec2f(c.x,c.y);
   
       ofVec2f p0 = ofVec2f(vertices[0].x,vertices[0].y);
       ofVec2f p1 = ofVec2f(vertices[1].x,vertices[1].y);
@@ -98,38 +100,39 @@ void testApp::update() {
     
       float u =  ((p-p1).dot(n0)) / ( (p-p1).dot(n0) + (p-p3).dot(n2) );
       float v =  1-((p-p1).dot(n1)) / ( (p-p1).dot(n1) + (p-p3).dot(n3) );
-    
+      
       bool tracked = false;
-      //update TUIO cursor
       for(int j = 0; j < clusters.size(); j++){
-        if(tracker.getLabelFromIndex(i) == clusters[j].label){
-          tuioServer->updateTuioCursor(clusters[j].cursor,u,v);
+        if(currentLabels[i] == clusters[j].label){
           tracked = true;
+          clusters[j].cursor->update(frameTime,u,v);
+          tuioServer->updateExternalTuioCursor(clusters[j].cursor);
           break;
         }
       }
-      //or add a new one
       if(!tracked){
         trackedCluster c;
-        c.cursor = tuioServer->addTuioCursor(u,v);
-        c.label = tracker.getLabelFromIndex(i);
+        c.label = currentLabels[i];
+        c.cursor = new TuioCursor(frameTime,c.label,c.label,u,v);
+        tuioServer->addExternalTuioCursor(c.cursor);
         clusters.push_back(c);
       }
     }
   
-    //remove idle cursors
-    /*tuioServer->stopUntouchedMovingCursors();
-    std::list<TuioCursor*> dead_cursor_list = tuioServer->getUntouchedCursors();
-    std::list<TuioCursor*>::iterator dead_cursor;
-    for(dead_cursor=dead_cursor_list.begin(); dead_cursor!= dead_cursor_list.end(); dead_cursor++) {
-		for(int i = 0; i < clusters.size(); i++){
-          if(&*dead_cursor == &clusters[i].cursor){
-            clusters.erase(clusters.begin()+i);
-            break;
-          }
+    //remove inactive cursors
+    for(int i = 0; i < clusters.size(); i++){
+      bool active = false;
+      for(int j = 0; j < currentLabels.size(); j ++){
+        if(currentLabels[i] == clusters[j].label){
+          active = true;
+          break;
         }
-	}
-	tuioServer->removeUntouchedStoppedCursors();*/
+      }
+      if(!active){
+        tuioServer->removeExternalTuioCursor(clusters[i].cursor);
+        clusters.erase(clusters.begin()+i);
+      }
+    }
   
 	tuioServer->commitFrame();
 }

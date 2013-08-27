@@ -21,7 +21,7 @@ typedef struct {
 
 typedef struct {
    unsigned int label;
-   TuioCursor   *cursor;
+   int          cursorID;
 }trackedCluster;
 
 class testApp : public ofBaseApp {
@@ -38,8 +38,9 @@ public:
     void exit(); 
     void guiEvent(ofxUIEventArgs &e);
   
+private:
     bool isDragging;
-    ofVec2f dragOffset, dragStart;
+    ofVec2f dragOffset, dragStart, mousePosition;
 	    
     int numVertices, minClusterSize, maxPointDistance;
     unsigned int maxClusterCount;
@@ -48,8 +49,6 @@ public:
 	
 	ofxSickGrabber grabber;
 	ofxSick* sick;
-  
-    int mX, mY;
 
     ofxUICanvas *gui; 	
   
@@ -58,4 +57,6 @@ public:
   
     TuioServer *tuioServer;
     vector<trackedCluster> clusters;
+
+    ofxXmlSettings settings;
 };

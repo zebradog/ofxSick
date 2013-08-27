@@ -4,23 +4,26 @@ using namespace cv;
 using namespace ofxCv;
 
 void testApp::setup() {
+
+    settings.loadFile("settings.xml");
+
 	ofSetVerticalSync(true);
-  
 	ofSetCircleResolution(64);
 	ofSetLogLevel(OF_LOG_VERBOSE);
   
+    isDragging = false;
+    dragOffset.x = settings.getValue("settings:drag-offset-x", 0);
+    dragOffset.y = settings.getValue("settings:drag-offset-y", 0);
+  
+    float dim = 24; 
+	float xInit = OFX_UI_GLOBAL_WIDGET_SPACING; 
+    float length = 320-xInit; 
+
     scale = 0.15;
     minClusterSize = 1;
     maxPointDistance = 50;
     maxClusterCount = 12;
     maxStddev = 60;
-  
-    isDragging = false;
-    dragOffset.x = dragOffset.y = 0;
-  
-    float dim = 24; 
-	float xInit = OFX_UI_GLOBAL_WIDGET_SPACING; 
-    float length = 320-xInit; 
 
     gui = new ofxUICanvas(0, 0, length+xInit, ofGetHeight());
     gui->addWidgetDown(new ofxUILabel("SETTINGS", OFX_UI_FONT_LARGE));
@@ -38,15 +41,15 @@ void testApp::setup() {
   
 	sick = &grabber;
   
+  	vertices[0].x = settings.getValue("settings:p0:x", 1200.0);
+	vertices[0].y = settings.getValue("settings:p0:y", -800.0);
+	vertices[1].x = settings.getValue("settings:p1:x", 1200.0);
+	vertices[1].y = settings.getValue("settings:p1:y", 800.0);
+	vertices[2].x = settings.getValue("settings:p2:x", 2400.0);
+	vertices[2].y = settings.getValue("settings:p2:y", 800.0);
+	vertices[3].x = settings.getValue("settings:p3:x", 2400.0);
+	vertices[3].y = settings.getValue("settings:p3:y", -800.0);
     numVertices = 4;
-  	vertices[0].x = 1200;
-	vertices[0].y = -800;
-	vertices[1].x = 1200;
-	vertices[1].y = 800;
-	vertices[2].x = 2400;
-	vertices[2].y = 800;
-	vertices[3].x = 2400;
-	vertices[3].y = -800;
     for (int i = 0; i < numVertices; i++){
 		vertices[i].bOver = false;
 		vertices[i].bBeingDragged = false;
@@ -134,11 +137,13 @@ void testApp::update() {
 void testApp::exit()
 {
     gui->saveSettings("GUI/guiSettings.xml");
+    settings.saveFile("settings.xml");
 	delete gui; 
 }
 
 void testApp::guiEvent(ofxUIEventArgs &e)
 {
+    isDragging = false;
     string name = e.widget->getName();
 	if(name == "SCALE"){
 		ofxUISlider *slider = (ofxUISlider *) e.widget;
@@ -214,10 +219,10 @@ void testApp::draw() {
     ofLine(p2.getMiddle(p3),p2.getMiddle(p3)-n2*length);
     ofLine(p3.getMiddle(p0),p3.getMiddle(p0)-n3*length);
     
-    if(trackingRegion.inside(mX,mY)){
+    if(trackingRegion.inside(mousePosition.x,mousePosition.y)){
         ofSetColor(255,0,255);
       
-        ofVec2f p = ofVec2f(mX, mY);
+        ofVec2f p = ofVec2f(mousePosition.x, mousePosition.y);
       
         double u =  ((p-p1).dot(n0)) / ( (p-p1).dot(n0) + (p-p3).dot(n2) );
         double v =  1-((p-p1).dot(n1)) / ( (p-p1).dot(n1) + (p-p3).dot(n3) );
@@ -226,7 +231,7 @@ void testApp::draw() {
         ofLine(ofPoint(p.x,p.y+length),ofPoint(p.x,p.y-length));
       
         ofSetColor(255);
-        ofDrawBitmapString(ofToString(u)+','+ofToString(v),ofPoint(mX+length/2,mY-length/2));
+        ofDrawBitmapString(ofToString(u)+','+ofToString(v),ofPoint(mousePosition.x+length/2,mousePosition.y-length/2));
     }
   
 	ofPopMatrix();
@@ -234,11 +239,11 @@ void testApp::draw() {
 
 //------------- -------------------------------------------------
 void testApp::mouseMoved(int x, int y ){
-    mX = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
-    mY = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
+    mousePosition.x = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
+    mousePosition.y = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
 	for (int i = 0; i < numVertices; i++){
-		float diffx = mX - vertices[i].x;
-		float diffy = mY - vertices[i].y;
+		float diffx = mousePosition.x - vertices[i].x;
+		float diffy = mousePosition.y - vertices[i].y;
 		float dist = sqrt(diffx*diffx + diffy*diffy);
 		if (dist < vertices[i].radius){
 			vertices[i].bOver = true;
@@ -250,13 +255,15 @@ void testApp::mouseMoved(int x, int y ){
 
 //--------------------------------------------------------------
 void testApp::mouseDragged(int x, int y, int button){
-    mX = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
-    mY = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
+    mousePosition.x = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
+    mousePosition.y = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
     trackingRegion.clear();
 	for (int i = 0; i < numVertices; i++){
 		if (vertices[i].bBeingDragged == true){
-			vertices[i].x = mX;
-			vertices[i].y = mY;
+			vertices[i].x = mousePosition.x;
+			vertices[i].y = mousePosition.y;
+            settings.setValue("settings:p"+ofToString(i)+":x",mousePosition.x);
+            settings.setValue("settings:p"+ofToString(i)+":y",mousePosition.y);
 		}
         trackingRegion.addVertex(vertices[i].x,vertices[i].y);
 	}
@@ -264,17 +271,19 @@ void testApp::mouseDragged(int x, int y, int button){
     if(isDragging){
       dragOffset.x = x - dragStart.x;
       dragOffset.y = y - dragStart.y;
+      settings.setValue("settings:drag-offset-x", dragOffset.x);
+      settings.setValue("settings:drag-offset-y", dragOffset.y);
     }
 }
 
 //--------------------------------------------------------------
 void testApp::mousePressed(int x, int y, int button){
-    mX = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
-    mY = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
+    mousePosition.x = (x - ofGetWidth() / 2 - dragOffset.x) / scale;
+    mousePosition.y = (y - ofGetHeight() / 2 - dragOffset.y) / scale;
     bool onVertice = false;
 	for (int i = 0; i < numVertices; i++){
-		float diffx = mX - vertices[i].x;
-		float diffy = mY - vertices[i].y;
+		float diffx = mousePosition.x - vertices[i].x;
+		float diffy = mousePosition.y - vertices[i].y;
 		float dist = sqrt(diffx*diffx + diffy*diffy);
 		if (dist < vertices[i].radius){
 			vertices[i].bBeingDragged = onVertice = true;

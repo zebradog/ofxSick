@@ -4,7 +4,7 @@ ofxSick is written for the SICK [LMS1xx](http://www.sick.com/us/en-us/home/produ
 
 ## LMS1xx Library
 
-The basic interface protocol is implemented by Konrad Banachowicz' [LMS1xx library](https://github.com/konradb3/libLMS1xx/). Because the library uses sockets, it maybe not be possible to compile on non-POSIX systems like Windows.
+The basic interface protocol is implemented by Konrad Banachowicz' [LMS1xx library](https://github.com/konradb3/libLMS1xx/). This library has been modified to use ofxNetwork for increased portability.
 
 Some major modifications have been made to the `LMS1xx::getData()` method in the LMS1xx library in order to support unusual packet fragmentation and unpredictable latency on OSX 10.8.
 

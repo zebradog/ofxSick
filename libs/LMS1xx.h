@@ -24,6 +24,8 @@
 #ifndef LMS1XX_H_
 #define LMS1XX_H_
 
+#include "ofMain.h"
+#include "ofxNetwork.h"
 #include <string>
 #include <stdint.h>
 
@@ -248,7 +250,7 @@ public:
 	* - stop angle.
 	* @returns scanCfg structure.
 	*/
-	scanCfg getScanCfg() const;
+	scanCfg getScanCfg();
 
 	/*!
 	* @brief Set scan configuration.
@@ -299,7 +301,7 @@ private:
 	bool connected;
 	bool debug;
 
-	int sockDesc;
+    ofxTCPClient tcpClient;
 };
 
 #endif /* LMS1XX_H_ */

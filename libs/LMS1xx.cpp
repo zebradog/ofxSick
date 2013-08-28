@@ -45,26 +45,14 @@ LMS1xx::~LMS1xx() {
 
 void LMS1xx::connect(std::string host, int port) {
 	if (!connected) {
-		sockDesc = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-		if (sockDesc) {
-			struct sockaddr_in stSockAddr;
-			int Res;
-			stSockAddr.sin_family = PF_INET;
-			stSockAddr.sin_port = htons(port);
-			Res = inet_pton(AF_INET, host.c_str(), &stSockAddr.sin_addr);
-
-			int ret = ::connect(sockDesc, (struct sockaddr *) &stSockAddr,
-					sizeof stSockAddr);
-			if (ret == 0) {
-				connected = true;
-			}
-		}
+        connected = tcpClient.setup(host,port,true);
+        if(debug) tcpClient.setVerbose(true);
 	}
 }
 
 void LMS1xx::disconnect() {
 	if (connected) {
-		close(sockDesc);
+        tcpClient.close();
 		connected = false;
 	}
 }
@@ -76,81 +64,46 @@ bool LMS1xx::isConnected() {
 void LMS1xx::startMeas() {
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sMN LMCstartmeas", 0x03);
-
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+  
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 }
 
 void LMS1xx::stopMeas() {
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sMN LMCstopmeas", 0x03);
-
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+  
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 }
 
 status_t LMS1xx::queryStatus() {
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sRN STlms", 0x03);
-
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+  
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
+  
 	int ret;
 	sscanf((buf + 10), "%d", &ret);
-
 	return (status_t) ret;
 }
 
 void LMS1xx::login() {
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sMN SetAccessMode 03 F4724744", 0x03);
-
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+  
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 }
 
-scanCfg LMS1xx::getScanCfg() const {
+scanCfg LMS1xx::getScanCfg(){
 	scanCfg cfg;
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sRN LMPscancfg", 0x03);
-
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+  
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 
 	sscanf(buf + 1, "%*s %*s %X %*d %X %X %X", &cfg.scaningFrequency,
 			&cfg.angleResolution, &cfg.startAngle, &cfg.stopAngle);
@@ -163,9 +116,8 @@ void LMS1xx::setScanCfg(const scanCfg &cfg) {
 			cfg.scaningFrequency, cfg.angleResolution, cfg.startAngle,
 			cfg.stopAngle, 0x03);
 
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 
 	buf[len - 1] = 0;
 }
@@ -178,9 +130,9 @@ void LMS1xx::setScanDataCfg(const scanDataCfg &cfg) {
 			cfg.deviceName ? 1 : 0, cfg.timestamp ? 1 : 0, cfg.outputInterval, 0x03);
 	if(debug)
 		printf("%s\n", buf);
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
+  
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 	buf[len - 1] = 0;
 }
 
@@ -188,9 +140,8 @@ void LMS1xx::scanContinous(int start) {
 	char buf[100];
 	sprintf(buf, "%c%s %d%c", 0x02, "sEN LMDscandata", start, 0x03);
 
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 
 	if (buf[0] != 0x02)
 		printf("invalid packet recieved\n");
@@ -200,9 +151,9 @@ void LMS1xx::scanContinous(int start) {
 		printf("%s\n", buf);
 	}
 
-	if (start = 0) {
+	if (start == 0) {
 		for (int i = 0; i < 10; i++)
-			read(sockDesc, buf, 100);
+            tcpClient.receiveRawBytes(buf,100);
 	}
 }
 
@@ -225,37 +176,8 @@ void LMS1xx::getData(scanData& data) {
 	// step 2: read local buffer from STX 0x02 to ETX 0x03
 	// step 3: parse most oldest data in fixed size queue
 	
-	/*
-	vector<char> complete;
-	while(true) {
-		fd_set rfds;
-		FD_ZERO(&rfds);
-		FD_SET(sockDesc, &rfds);
-		
-		struct timeval tv;
-		tv.tv_sec = 0;
-		tv.tv_usec = 50000;
-		
-		int socketsAvailable = select(sockDesc + 1, &rfds, NULL, NULL, &tv);
-		if(socketsAvailable > 0) { // at least one socket available
-			int curLen = read(sockDesc, raw, DATA_BUF_LEN); // read available data
-			if(curLen > 0) { // some data was read
-				cout << "copied " << curLen << " bytes " << repeat("x", curLen/120) << endl;
-				complete.insert(complete.end(), raw, raw + curLen); // copy to complete
-			} else { // no data remains
-				cout << "no more data available" << endl;
-				break;
-			}
-		} else { // no more sockets available
-			cout << "no more sockets available" << endl;
-			break;
-		}
-	}
-	return;
-*/
 	char buf[DATA_BUF_LEN];
 	int len = 0;
-	
 	
 	if(leftovers.size() > 0) {
 		if(debug)
@@ -275,25 +197,10 @@ void LMS1xx::getData(scanData& data) {
 	while(true) {
 		if(debug)
 			cout << "inside do while. ";
-				
-		fd_set rfds;
-		FD_ZERO(&rfds);
-		FD_SET(sockDesc, &rfds);
-		
-		struct timeval tv;
-		tv.tv_sec = 0;
-		tv.tv_usec = 50000;
-		
-		int retval = select(sockDesc + 1, &rfds, NULL, NULL, &tv); // maybe only once?
-		if(debug)
-			cout << "retval: " << retval << " ";
-		int curLen = 0;
-		if (retval) {
-			curLen = read(sockDesc, raw, DATA_BUF_LEN); // read till this is zero
-			if(debug)
-					cout << "(" << curLen << " chars) ";
-		}
-		
+
+        int curLen = tcpClient.receiveRawBytes(raw,DATA_BUF_LEN);
+		if(debug)cout << "(" << curLen << " chars) ";
+      
 		bool done = false;
 		for(int i = 0; i < curLen; i++) {
 			if(raw[i] == 0x03) { // found an ETX
@@ -311,15 +218,13 @@ void LMS1xx::getData(scanData& data) {
 			cout << endl;
 		if(done) {
 			break;
-		}
+        }
 	}
 	if(debug) {
 		unsigned long stop = ofGetSystemTime();
 		cout << "receive time: " << (stop - start) << " with " << len << " bytes received and " << leftovers.size() << " leftover" << endl;
 	}
 
-	//	if (debug)
-	//		std::cout << "scan data recieved" << std::endl;
 	buf[len - 1] = 0;
 	char* tok = strtok(buf, " "); //Type of command
 	tok = strtok(NULL, " "); //Command
@@ -467,28 +372,14 @@ void LMS1xx::saveConfig() {
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sMN mEEwriteall", 0x03);
 
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 }
 
 void LMS1xx::startDevice() {
 	char buf[100];
 	sprintf(buf, "%c%s%c", 0x02, "sMN Run", 0x03);
 
-	write(sockDesc, buf, strlen(buf));
-
-	int len = read(sockDesc, buf, 100);
-	//	if (buf[0] != 0x02)
-	//		std::cout << "invalid packet recieved" << std::endl;
-	//	if (debug) {
-	//		buf[len] = 0;
-	//		std::cout << buf << std::endl;
-	//	}
+    tcpClient.sendRawBytes(buf,strlen(buf));
+    int len = tcpClient.receiveRawBytes(buf,100);
 }

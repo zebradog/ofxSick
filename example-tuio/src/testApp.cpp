@@ -62,12 +62,8 @@ void testApp::setup() {
 	tracker.setPersistence(10);
   
     tuioServer = new TuioServer("127.0.0.1",3333); //external client
-	tuioServer->setSourceName("ofxSickExample");
-	tuioServer->enableObjectProfile(false);
-	tuioServer->enableBlobProfile(false);
   
     ofSetFrameRate(30);
-  
 }
 
 void testApp::update() {

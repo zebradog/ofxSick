@@ -295,7 +295,11 @@ void ofxSickGrabber::threadedFunction() {
 		scanBack.first.distance.assign(data.dist1, data.dist1 + data.dist_len1);
 		scanBack.first.brightness.assign(data.rssi1, data.rssi1 + data.rssi_len1);
 		scanBack.second.distance.assign(data.dist2, data.dist2 + data.dist_len2);
-		scanBack.second.brightness.assign(data.rssi2, data.rssi2 + data.rssi_len2);
+		//HACK
+		// segfault on windows when accessing data.rssi_len2 here. Needs to be debugged
+		#ifndef WIN32
+        scanBack.second.brightness.assign(data.rssi2, data.rssi2 + data.rssi_len2);
+        #endif
 		newFrame = true;
 		unlock();
 		//unsigned long stop = ofGetSystemTime();

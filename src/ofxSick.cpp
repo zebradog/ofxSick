@@ -198,7 +198,7 @@ void ofxSick::analyze() {
 
 ofxSickGrabber::ofxSickGrabber()
 :recording(false)
-,ip("169.254.143.14") {
+,ip("127.0.0.1") {
 }
 
 void ofxSickGrabber::setIp(string ip) {

@@ -61,7 +61,10 @@ void testApp::setup() {
 	tracker.setMaximumDistance(100);
 	tracker.setPersistence(10);
   
-    tuioServer = new TuioServer("127.0.0.1",3333); //external client
+    tuioServerHost = "169.254.143.14";
+    tuioServerPort = 3332;
+  
+    tuioServer = new TuioServer(tuioServerHost,tuioServerPort); 
   
     ofSetFrameRate(30);
 }

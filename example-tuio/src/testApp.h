@@ -56,6 +56,8 @@ private:
 	ofPolyline trackingRegion;
   
     TuioServer *tuioServer;
+    const char *tuioServerHost;
+    int tuioServerPort;
     vector<trackedCluster> clusters;
 
     ofxXmlSettings settings;
